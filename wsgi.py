@@ -1,3 +1,4 @@
-from flaskr import getApp
+from flaskr import create_app
 
-app = getApp()
+app = create_app()
+app.run()
