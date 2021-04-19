@@ -1,4 +1,4 @@
-import functools
+import functools, requests, json
 
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for, Flask
@@ -7,6 +7,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 from flaskr.db import get_db
+
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -37,8 +38,8 @@ def register():
         elif not password:
             error = 'Password is required.'
         elif db.execute(
-            'SELECT id FROM user WHERE username = ?', (username,)
-        ).fetchone() is not None:
+                'SELECT id FROM user WHERE username = ?', (username,)
+             ).fetchone() is not None:
             error = 'User {} is already registered.'.format(username)
         
         if myphoto and allowed_file(myphoto.filename):
@@ -65,6 +66,7 @@ def register():
 @bp.route('/login', methods=('GET', 'POST'))
 def login():
     user_id = session.get('user_id')
+    sitekey = "6LdxdbAaAAAAABW80e7Z8qF6bH6AmiDiiDxPhlnA"
 
     if user_id is not None:
         return redirect(url_for('blog.index'))
@@ -72,6 +74,13 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        captcha_response = request.form['g-recaptcha-response']
+
+        if is_human(captcha_response):
+            pass
+        else:
+            return redirect(url_for('auth.login'))
+
         db = get_db()
         error = None
         user = db.execute(
@@ -90,7 +99,7 @@ def login():
 
         flash(error)
 
-    return render_template('auth/login.html')
+    return render_template('auth/login.html', sitekey=sitekey)
 
 
 @bp.before_app_request
@@ -120,3 +129,11 @@ def login_required(view):
         return view(**kwargs)
 
     return wrapped_view
+
+
+def is_human(captcha_response):
+    secret = "6LdxdbAaAAAAAAzTX1LwQDq5j4WKO421SmmQAHD2"
+    payload = {'response':captcha_response, 'secret':secret}
+    response = requests.post("https://www.google.com/recaptcha/api/siteverify", payload)
+    response_text = json.loads(response.text)
+    return response_text['success']
