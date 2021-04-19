@@ -2,7 +2,6 @@ import os
 
 from flask import Flask, flash
 
-secret_key = os.urandom(32)
 
 def create_app(test_config=None):
     # create and configure the app
