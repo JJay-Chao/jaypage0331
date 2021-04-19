@@ -5,9 +5,8 @@ from flask import (
 from flaskr.db import get_db
 
 import os
-from multiprocessing import Value
 
-counter = Value('i', 0)
+
 app = Flask(__name__)
 
 bp = Blueprint('home', __name__)
@@ -22,8 +21,6 @@ def home():
     db = get_db()
     if user_id is not None:
         if cookies_now not in cookies_history:
-            counter.value += 1
-            out = counter.value
             cookies_history.append(cookies_now)
 
             user_id = session.get('user_id')
@@ -42,16 +39,21 @@ def home():
             
             db.commit()
         else:
-            out = counter.value
-
             user = db.execute(
                         'SELECT * FROM user WHERE id = ?', (user_id,)
                    ).fetchone()
             
             user_visit = user['visits']
     else:
-        out = counter.value
         user_visit = '-'
+    
+    users = db.execute(
+                'SELECT * FROM user'
+           ).fetchall()
+    
+    visit_all = 0
+    for user in users:
+        visit_all += user['visits']
 
     image_path = os.path.join('static', 'JayImage', 'myImage.jpg')
-    return render_template('home/home.html', image_path=image_path, visits=out, user_visit=user_visit)
+    return render_template('home/home.html', image_path=image_path, visits=visit_all, user_visit=user_visit)
